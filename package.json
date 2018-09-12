@@ -11,8 +11,8 @@
   "author": "",
   "license": "ISC",
   "engines": {
-    "node": "10.10.0",
-    "npm": "6.4.1"
+    "node": "^10.10.0",
+    "npm": "^6.4.0"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.2",
