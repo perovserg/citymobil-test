@@ -11,7 +11,7 @@
   "author": "",
   "license": "ISC",
   "engines": {
-    "node": "^10.10.0",
+    "node": "10.10.0",
     "npm": "^6.4.0"
   },
   "dependencies": {
