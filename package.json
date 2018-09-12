@@ -10,6 +10,10 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": "10.10.0",
+    "npm": "6.4.1"
+  },
   "dependencies": {
     "cheerio": "^1.0.0-rc.2",
     "express": "^4.16.3",
