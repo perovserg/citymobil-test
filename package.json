@@ -1,7 +1,7 @@
 {
-  "name": "Forcetaxi cytimobil",
+  "name": "cytimobil-test",
   "version": "1.0.0",
-  "description": "",
+  "description": "cytimobil-test",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
