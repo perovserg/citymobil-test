@@ -4,7 +4,7 @@
   "description": "cytimobil-test",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node -r esm index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -15,8 +15,12 @@
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.2",
+    "esm": "^3.0.82",
     "express": "^4.16.3",
+    "moment": "latest",
+    "mysql2": "^1.6.1",
     "node-xlsx": "^0.12.1",
+    "request": "^2.88.0",
     "request-promise": "^4.2.2",
     "sequelize": "^4.38.0"
   }

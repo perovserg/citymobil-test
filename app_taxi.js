@@ -1,5 +1,8 @@
 import Sequelize from 'sequelize';
 import cheerio from 'cheerio';
+import classCityFactory from './citytaxi.class';
+import moment from 'moment';
+
 
 const app = {};
 
@@ -45,9 +48,34 @@ app.sendErr = function(desc, error) {  console.log(desc, error);  /* отпра�
 
 app.$ = cheerio;
 
+app.Sequelize = Sequelize;
+
+// app.models = ???
+
 app.con = new Sequelize(process.env.DATABASE_URL, { logging: false, operatorsAliases: operatorsAliases, pool: {
         max: 5,
         min: 0,
         idle: 20000,
         acquire: 20000
     }});
+
+const login = 'kosarev__ba',
+    password = '1G3uC6ii4gpx';
+
+const ClassCity = classCityFactory(app);
+
+const citytaxi = new ClassCity(login, password);
+
+
+const from = moment().subtract(1, 'days').startOf('day').format('DD-MM-YYYY');
+const to = moment().add(1, 'days').startOf('day').format('DD-MM-YYYY');
+
+//const from = %начало вчерашнего дня в формате 08-09-2018%
+//const to = %начало следующего дня  в формате 10-09-2018%
+citytaxi.syncOrders(from, to)
+    .then((res) => {
+        console.log(`City
+            From: ${from}
+            To: ${to}
+            Total: ${res.total}, new: ${res.new}, drivers +${res.newDrvs.length + res.drvSync.new}`);
+        });

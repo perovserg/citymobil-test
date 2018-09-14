@@ -3,8 +3,6 @@
  */
 
 
-// app.con
-
 module.exports = (app) => {
 
     class citytaxi {
@@ -110,6 +108,32 @@ module.exports = (app) => {
                 name:            {type: app.Sequelize.STRING},
             });
 
+            this.Users = app.con.define('users', {
+                first_name:             {type: app.Sequelize.STRING},
+                last_name:              {type: app.Sequelize.STRING},
+                username:               {type: app.Sequelize.STRING},
+                telegramId:             {type: app.Sequelize.INTEGER},
+                desc:                   {type: app.Sequelize.STRING},
+                alfa:                   {type: app.Sequelize.BOOLEAN, defaultValue: false},
+                sber:                   {type: app.Sequelize.BOOLEAN, defaultValue: false},
+                qiwi:                   {type: app.Sequelize.BOOLEAN, defaultValue: true},
+                card:                   {type: app.Sequelize.STRING},
+                phone:                  {type: app.Sequelize.STRING},
+                is_verified:            {type: app.Sequelize.BOOLEAN, defaultValue: false},
+                promo_link:             {type: app.Sequelize.STRING},
+                is_partner:             {type: app.Sequelize.BOOLEAN, defaultValue: false},
+                is_recruiter:           {type: app.Sequelize.BOOLEAN, allowNull: false, defaultValue: false},
+                resident:               {type: app.Sequelize.INTEGER(1), defaultValue: 1, allowNull: false},
+                apihash:                {type: app.Sequelize.STRING},
+                apitoken:               {type: app.Sequelize.STRING},
+                is_blocked:             {type: app.Sequelize.BOOLEAN, allowNull: false, defaultValue: false}
+            }, {
+                getterMethods:          {
+                    fullname()          {return `${this.last_name ? this.last_name  : ''} ${this.first_name} ${this.username ? `(@${ this.username })` : ''}`},
+                    respectname()       {return this.first_name}
+                }
+            });
+
             this.Drivers        .hasMany(   this.Trips,               { foreignKey: 'driverId', as: 'trips'});
             this.Drivers        .hasMany(   this.Balances,            { foreignKey: 'driverId', as: 'balances'});
             this.Balances       .belongsTo( this.BalanceTypes,        { foreignKey: 'typeId',   as: 'type'});
@@ -120,10 +144,13 @@ module.exports = (app) => {
             this.Payments       .belongsTo( this.Drivers,             { foreignKey: 'driverId', as: 'driver'});
             this.Drivers        .hasMany(   this.Payments,            { foreignKey: 'driverId', as: 'payments'});
 
+
             //console.log('app.models.Users', app.models.Users)
 
-            this.Drivers        .belongsTo( app.models.Users,         { foreignKey: 'userId',   as: 'user'});
-            app.models.Users    .hasOne(    this.Drivers,             { foreignKey: 'userId',   as: 'city'});
+      //      this.Drivers        .belongsTo( app.models.Users,         { foreignKey: 'userId',   as: 'user'});
+      //      app.models.Users    .hasOne(    this.Drivers,             { foreignKey: 'userId',   as: 'city'});
+            this.Drivers        .belongsTo( this.Users,         { foreignKey: 'userId',   as: 'user'});
+            this.Users          .hasOne(    this.Drivers,       { foreignKey: 'userId',   as: 'city'});
 
             //console.log('app.models.Users', app.models.Users)
         }
@@ -140,7 +167,7 @@ module.exports = (app) => {
                     url: `${this.baseUrl}/partnerordersreport`,
                     qs: {
                         exec: '1',
-                        companyid: '1822',
+                        companyid: this.companyId,
                         id_locality: '2',
                         dayB: from,
                         time_b: '',
@@ -257,6 +284,35 @@ module.exports = (app) => {
             }
         }
 
+        async getCompanyId() {
+            try {
+
+                await this.login();
+
+                const opt = {
+                    method: 'GET',
+                    url: `${this.baseUrl}/drivers`,
+                    headers: {
+                        'Cache-Control': 'no-cache' },
+                    json: true,
+                    jar: true
+                };
+
+                const driversPage = await this.request(opt);
+
+                const $ = app.$.load(driversPage, {decodeEntities: true});
+
+
+                this.companyId = parseInt( $('#companyid :selected')[0].attribs.value);
+
+                console.log('companyId: ', this.companyId);
+
+            } catch (e) {
+                app.sendErr('citytaxi getCompanyId', e);
+                throw e
+            }
+        }
+
         async getDrivers() {
             try {
 
@@ -279,7 +335,7 @@ module.exports = (app) => {
                             "status": "A",
                             "child":0,
                             "outer_uuid":"",
-                            "companyid": 1822,
+                            "companyid": this.companyId,
                             "has_warning":[],
                             "y_import_status":[],
                             "id_locality":2,
@@ -422,6 +478,8 @@ module.exports = (app) => {
             try {
 
                 await this.login();
+
+                await this.getCompanyId();
 
                 const drvResult = await this.driversSync();
 
@@ -758,6 +816,6 @@ module.exports = (app) => {
 
     }
 
-    return citytaxi
+    return citytaxi;
 
-}
+};
