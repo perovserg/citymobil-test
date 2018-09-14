@@ -134,6 +134,7 @@ module.exports = (app) => {
                 }
             });
 
+
             this.Drivers        .hasMany(   this.Trips,               { foreignKey: 'driverId', as: 'trips'});
             this.Drivers        .hasMany(   this.Balances,            { foreignKey: 'driverId', as: 'balances'});
             this.Balances       .belongsTo( this.BalanceTypes,        { foreignKey: 'typeId',   as: 'type'});
