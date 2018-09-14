@@ -78,13 +78,14 @@ sequelizeConnection()
         });
 
         // todo incoming request for this
-        await Parks.create({
-            parkId: 666,
-//            login: 'kosarev__ba',
-            login: 'vasya_pupkin',
-//            password: '1G3uC6ii4gpx'
-            password: '12345'
-        });
+
+        const parkData = {
+            parkId: 3414,
+            login: 'kosarev__ba',
+            password: '1G3uC6ii4gpx'
+        };
+
+        await Parks.findOrCreate({ where: {parkId: parkData.parkId}, defaults: parkData});
 
         await handleParksList();
 
