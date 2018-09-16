@@ -11,7 +11,9 @@ module.exports = (app) => {
 
             this.baseUrl = 'https://city-mobil.ru/taxiserv';
             this.logined = false;
+            this.utf8 =  require('utf8');;
             this.request = require('request-promise');
+            this.jar = this.request.jar();
 
             this.auth = {
                login: login,
@@ -177,7 +179,7 @@ module.exports = (app) => {
                     headers: {
                         'Cache-Control': 'no-cache' },
                     encoding: null,
-                    jar: true
+                    jar: this.jar
                 };
 
                 const orders = await this.request(opt);
@@ -220,7 +222,7 @@ module.exports = (app) => {
                     headers: {
                         'Cache-Control': 'no-cache' },
                     json: true,
-                    jar: true
+                    jar: this.jar
                 };
 
                 const payments = await this.request(opt);
@@ -296,7 +298,7 @@ module.exports = (app) => {
                     headers: {
                         'Cache-Control': 'no-cache' },
                     json: true,
-                    jar: true
+                    jar: this.jar
                 };
 
                 const driversPage = await this.request(opt);
@@ -389,7 +391,7 @@ module.exports = (app) => {
                     headers: {
                         'Cache-Control': 'no-cache' },
                     json: true,
-                    jar: true
+                    jar: this.jar
                 };
 
                 const drivers = await this.request(opt);
@@ -478,7 +480,7 @@ module.exports = (app) => {
             let orderArr;
             try {
 
-                await this.login();
+                if (!await this.login()) return {error: 'login fail'};
 
                 await this.getCompanyId();
 
@@ -651,7 +653,7 @@ module.exports = (app) => {
                     method: 'GET',
                     url: 'https://city-mobil.ru/taxiserv/driverpayment',
                     qs: { id_driver: driverUID },
-                    jar: true
+                    jar: this.jar
                 });
 
                 const $ = app.$.load(paymentPage, {decodeEntities: true});
@@ -700,7 +702,7 @@ module.exports = (app) => {
                         id_transaction: txnId,
                         _csrf_token: CSRF_TOKEN },
                     json: true,
-                    jar: true
+                    jar: this.jar
                 };
 
                 const paymentResult = await await this.request(opt);
@@ -734,7 +736,7 @@ module.exports = (app) => {
                     method: 'GET',
                     url: 'https://city-mobil.ru/taxiserv/driverpayment',
                     qs: { id_driver: UID },
-                    jar: true
+                    jar: this.jar
                 });
 
                 let $ = app.$.load(paymentPage, {decodeEntities: true});
@@ -745,7 +747,7 @@ module.exports = (app) => {
                         method: 'GET',
                         url: 'https://city-mobil.ru/taxiserv/driverpayment',
                         qs: { id_driver: UID },
-                        jar: true
+                        jar: this.jar
                     });
 
                     let $ = app.$.load(paymentPage, {decodeEntities: true});
@@ -769,6 +771,7 @@ module.exports = (app) => {
         }
 
         async login() {
+
             try {
 
                 const now = Date.now();
@@ -782,8 +785,7 @@ module.exports = (app) => {
                     url: `${this.baseUrl}/login`,
                     headers:
                         {
-                            'Cache-Control': 'no-cache',
-                            'content-type': 'multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW'
+                            'Cache-Control': 'no-cache'
                         },
                     formData:
                         {
@@ -791,19 +793,24 @@ module.exports = (app) => {
                             password: this.auth.password,
                             Submit: 'Войти'
                         },
-                    jar: true
+                    jar: this.jar
                 };
 
-                let loginData;
-
                 try {
-                    loginData = await this.request(opt);
-
-                    console.log('loginData',loginData);
+                    await this.request(opt);
                 } catch (e) {
                     if(e.statusCode !== 302) {
                         throw e
                     }
+                    const responseLocation = e.response.headers.location;
+                    if (responseLocation) {
+                        if(responseLocation.indexOf('login?r=&error') > -1) {
+                            this.logined = false;
+                            app.sendErr(`citytaxi login fail for ${this.auth.login}`, this.utf8.decode(responseLocation));
+                            return false;
+                        }
+                    }
+
                 }
                 this.logined = Date.now();
 
