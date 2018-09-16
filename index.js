@@ -58,29 +58,30 @@ app.Sequelize = Sequelize;
 const sequelizeConnection = async () => {
 
     app.con = new Sequelize(process.env.DATABASE_URL,{
-        logging: false, operatorsAliases: operatorsAliases,
+        logging: false,
+        operatorsAliases: operatorsAliases,
         pool: {
             max: 5,
             min: 0,
             idle: 20000,
             acquire: 20000
-        },
-        sync: { force: true }
+        }
     });
-
-    try {
-        await app.con.sync();
-        console.info(`Sequelize is ready!`);
-    } catch (e) {
-        console.error(e);
-        throw new Error('Sequelize connection error!');
-    }
 
     app.Parks = app.con.define('city_parks', {
         parkId: {type: app.Sequelize.INTEGER},
         login: {type: app.Sequelize.STRING},
         password: {type: app.Sequelize.STRING},
     });
+
+    try {
+        await app.con.sync({force: false});
+        console.info(`Sequelize is ready!`);
+    } catch (e) {
+        console.error(e);
+        throw new Error('Sequelize connection error!');
+    }
+
 };
 
 
@@ -193,7 +194,6 @@ app.post('/park', async (request, response) => {
     } catch (e) {
         response.status(400).json({error: e});
     }
-
 });
 
 

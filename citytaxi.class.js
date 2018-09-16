@@ -88,6 +88,8 @@ module.exports = (app) => {
                 }
             });
 
+
+
             this.Drivers.prototype.classInstance = this;
 
             this.Drivers.prototype.balanceTxn = function(amount, txnId, comment, typeId) {
@@ -480,6 +482,8 @@ module.exports = (app) => {
             let orderArr;
             try {
 
+                await this.syncTable();
+
                 if (!await this.login()) return {error: 'login fail'};
 
                 await this.getCompanyId();
@@ -822,6 +826,17 @@ module.exports = (app) => {
             }
         }
 
+        async syncTable() {
+
+            try {
+
+                await app.con.sync({force: false}); //create tables if not exist
+
+            } catch (e) {
+                app.sendErr('citytaxi syncTable', e);
+                throw e
+            }
+        }
     }
 
     return citytaxi;
