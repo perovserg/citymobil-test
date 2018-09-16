@@ -57,12 +57,16 @@ app.Sequelize = Sequelize;
 
 const sequelizeConnection = async () => {
 
-    app.con = new Sequelize(process.env.DATABASE_URL, { logging: false, operatorsAliases: operatorsAliases, pool: {
+    app.con = new Sequelize(process.env.DATABASE_URL,{
+        logging: false, operatorsAliases: operatorsAliases,
+        pool: {
             max: 5,
             min: 0,
             idle: 20000,
             acquire: 20000
-        }});
+        },
+        sync: { force: true }
+    });
 
     try {
         await app.con.sync();
