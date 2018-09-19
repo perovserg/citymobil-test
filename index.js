@@ -4,10 +4,40 @@ import cheerio from 'cheerio';
 import moment from 'moment';
 import express from 'express';
 import bodyParser from 'body-parser';
+import TelegramBot from 'node-telegram-bot-api';
 
 import classCityFactory from './citytaxi.class';
 
+
 const app = express();
+
+
+const telegramToken = '627471376:AAETsMXUx9y8-Tbev8MOpiETKMxtrJL1Hws'; // todo replace to config file
+
+app.telegramBot = new TelegramBot(telegramToken, {polling: true});
+
+// Matches "/echo [whatever]"
+app.telegramBot.onText(/\/echo (.+)/, (msg, match) => {
+    // 'msg' is the received Message from Telegram
+    // 'match' is the result of executing the regexp above on the text content
+    // of the message
+
+    const chatId = msg.chat.id;
+    const resp = match[1]; // the captured "whatever"
+
+    // send back the matched "whatever" to the chat
+    app.telegramBot.sendMessage(chatId, resp);
+});
+
+// Listen for any kind of message. There are different kinds of
+// messages.
+app.telegramBot.on('message', (msg) => {
+    const chatId = msg.chat.id;
+
+    // send a message to the chat acknowledging receipt of their message
+    app.telegramBot.sendMessage(chatId, 'Received your message');
+});
+
 
 const Op = Sequelize.Op;
 const operatorsAliases = {
