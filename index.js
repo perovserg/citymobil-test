@@ -196,6 +196,14 @@ app.telegramBot.onText(/\/stopApp/, async(msg) => {
 
 });
 
+app.telegramBot.onText(/\/statusApp/, async(msg) => {
+    if (app.handlingInterval){
+        app.telegramBot.sendMessage(msg.chat.id, `parks list handling is working: ${moment().diff(app.startTime, 'seconds')} seconds`);
+    } else {
+        app.telegramBot.sendMessage(msg.chat.id, `parks list handling is not working`);
+    }
+});
+
 
 app.sendErr = (desc, error) => {
     console.error(desc, error);
