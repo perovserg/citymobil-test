@@ -808,9 +808,10 @@ module.exports = (app) => {
                     }
                     const responseLocation = e.response.headers.location;
                     if (responseLocation) {
-                        if(responseLocation.indexOf('login?r=&error') > -1) {
+                        if (responseLocation.indexOf('login?r=&error') > -1) {
                             this.logined = false;
-                            app.sendErr(`citytaxi login fail for ${this.auth.login}`, this.utf8.decode(responseLocation));
+                            console.error(`citytaxi login fail for ${this.auth.login}`, this.utf8.decode(responseLocation));
+                        //    app.sendErr(`citytaxi login fail for ${this.auth.login}`, this.utf8.decode(responseLocation));
                             return false;
                         }
                     }

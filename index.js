@@ -6,38 +6,12 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import TelegramBot from 'node-telegram-bot-api';
 
+
+import config from './config';
 import classCityFactory from './citytaxi.class';
 
 
 const app = express();
-
-
-const telegramToken = '627471376:AAETsMXUx9y8-Tbev8MOpiETKMxtrJL1Hws'; // todo replace to config file
-
-app.telegramBot = new TelegramBot(telegramToken, {polling: true});
-
-// Matches "/echo [whatever]"
-app.telegramBot.onText(/\/echo (.+)/, (msg, match) => {
-    // 'msg' is the received Message from Telegram
-    // 'match' is the result of executing the regexp above on the text content
-    // of the message
-
-    const chatId = msg.chat.id;
-    const resp = match[1]; // the captured "whatever"
-
-    // send back the matched "whatever" to the chat
-    app.telegramBot.sendMessage(chatId, resp);
-});
-
-// Listen for any kind of message. There are different kinds of
-// messages.
-app.telegramBot.on('message', (msg) => {
-    const chatId = msg.chat.id;
-
-    // send a message to the chat acknowledging receipt of their message
-    app.telegramBot.sendMessage(chatId, 'Received your message');
-});
-
 
 const Op = Sequelize.Op;
 const operatorsAliases = {
@@ -76,8 +50,6 @@ const operatorsAliases = {
     $values: Op.values,
     $col: Op.col
 };
-
-app.sendErr = function(desc, error) {  console.error(desc, error);  /* отправка ошибки в телеграм бот*/ }
 
 app.$ = cheerio;
 
@@ -128,6 +100,8 @@ const handleParksList = async () => {
     const from = moment().subtract(1, 'days').startOf('day').format('DD-MM-YYYY'); //%начало вчерашнего дня в формате 08-09-2018%
     const to = moment().add(1, 'days').startOf('day').format('DD-MM-YYYY'); //%начало следующего дня  в формате 10-09-2018%
 
+    let count = 0;
+
     for (const park of parksList) {
 
         console.log(`start for ParkId: ${park.dataValues.parkId}`);
@@ -143,29 +117,91 @@ const handleParksList = async () => {
             From: ${from}
             To: ${to}
             Total: ${res.total}, new: ${res.new}, drivers +${res.newDrvs.length + res.drvSync.new}`);
+            count++;
         }
     }
+
+    if (!count) app.sendErr('', 'there is no handled park! maybe source out of service...');
+
 };
 
+// default interval = 30 minutes
+const startHandling = async (interval = 30) => {
 
-const startHandling = async (interval) => {
+    app.startTime = moment();
 
     await sequelizeConnection();
 
     await handleParksList();
 
-    const intervalMS = interval * 60 * 1000;
+    const intervalMS = parseInt(interval, 10) * 60 * 1000;
 
     app.handlingInterval = setInterval(handleParksList,intervalMS);
+
 };
 
 
-app.set('port', (process.env.PORT || 5000));
+app.set('port', (op.get(config, 'port') || 5000));
+
 app.use(express.static(__dirname + '/public'));
 
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(bodyParser.json());
 app.use(bodyParser.raw({limit: '2048kb'}));
+
+app.telegramBot = new TelegramBot(op.get(config, 'telegram.token') || '', {polling: true});
+
+app.telegramBotChatIds = [];
+
+app.telegramBot.onText(/\/startApp (.+)/, async(msg, match) => {
+
+    if (!app.telegramBotChatIds.includes(msg.chat.id)) app.telegramBotChatIds.push(msg.chat.id);
+
+    const args = match[1];
+
+    const argsJSON = JSON.parse('{"' + args.replace(/ /g, '", "').replace(/=/g, '": "') + '"}');
+
+    const interval = op.get(argsJSON, 'interval', 30);
+
+    try {
+        await startHandling(interval);
+    } catch (e) {
+        app.telegramBot.sendMessage(msg.chat.id, `error: ${e}`);
+    }
+
+    app.telegramBot.sendMessage(msg.chat.id, `parks list handling is started with interval: ${interval} minutes.`);
+});
+
+app.telegramBot.onText(/\/stopApp/, async(msg) => {
+
+    const i = app.telegramBotChatIds.indexOf(msg.chat.id);
+    if (i > -1) app.telegramBotChatIds.splice(i, 1);
+
+    if (app.telegramBotChatIds.length > 0) {
+        app.telegramBot.sendMessage(msg.chat.id, `your chat is removed form list of chats.`);
+        return;
+    }
+
+    if (app.handlingInterval) {
+        try {
+            clearInterval(app.handlingInterval);
+        } catch (e) {
+            app.telegramBot.sendMessage(msg.chat.id, `error: ${e}`);
+        }
+    } else {
+        app.telegramBot.sendMessage(msg.chat.id, `error: parks list handling didn't started`);
+    }
+
+    app.telegramBot.sendMessage(msg.chat.id, `parks list handling is stopped. working time: ${moment().diff(app.startTime, 'seconds')} seconds`);
+
+});
+
+
+app.sendErr = (desc, error) => {
+    console.error(desc, error);
+
+    app.telegramBotChatIds.forEach((chatId) => {app.telegramBot.sendMessage(chatId, 'error: ' + desc + error)});
+};
 
 app.get('/', function(request, response) {
     response.send('Hello World!');
@@ -173,11 +209,8 @@ app.get('/', function(request, response) {
 
 app.get('/start', async (request, response) => {
 
-    const interval = parseInt(op.get(request.query, 'interval', 30), 10); // default value = 30 minutes
-
     try {
-        app.startTime = moment();
-        await startHandling(interval);
+        await startHandling(op.get(request.query, 'interval'));
     } catch (e) {
         response.status(400).json({error: e});
     }
@@ -185,6 +218,7 @@ app.get('/start', async (request, response) => {
     response.status(200).json({
         message: `parks list handling is started with interval: ${interval} minutes.`
     });
+
 });
 
 
