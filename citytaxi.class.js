@@ -400,7 +400,6 @@ module.exports = (app) => {
 
                 const $ = app.$.load(drivers.html, {decodeEntities: true});
 
-
                 const pages = parseInt( $('.pages li:last-child span').text().replace(/\D/g,'') );
 
                 console.log('pages', pages);
@@ -437,8 +436,6 @@ module.exports = (app) => {
 
                     }));
                 }
-
-                //console.log()
 
                 return driversData;
 
@@ -803,6 +800,9 @@ module.exports = (app) => {
                 try {
                     await this.request(opt);
                 } catch (e) {
+                    if(e.statusCode === 502) {
+                        app.sendErr(`Fail on getting response from (${opt.url}) statusCode = ${e.statusCode}`, '');
+                    }
                     if(e.statusCode !== 302) {
                         throw e
                     }

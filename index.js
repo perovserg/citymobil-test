@@ -9,6 +9,7 @@ import TelegramBot from 'node-telegram-bot-api';
 
 import config from './config';
 import classCityFactory from './citytaxi.class';
+import routes from './routes/index';
 
 
 const app = express();
@@ -57,7 +58,7 @@ app.Sequelize = Sequelize;
 
 // app.models = ???
 
-const sequelizeConnection = async () => {
+app.sequelizeConnection = async () => {
 
     app.con = new Sequelize(process.env.DATABASE_URL,{
         logging: false,
@@ -80,14 +81,13 @@ const sequelizeConnection = async () => {
         await app.con.sync({force: false});
         console.info(`Sequelize is ready!`);
     } catch (e) {
-        console.error(e);
-        throw new Error('Sequelize connection error!');
+        app.sendErr('Sequelize connection error: ', e);
     }
 
 };
 
 
-const handleParksList = async () => {
+app.handleParksList = async () => {
 
     console.log(`parks list handling start -> ${moment().format('DD/MM/YYYY HH:mm:ss')}`);
 
@@ -111,7 +111,7 @@ const handleParksList = async () => {
         const res = await citytaxi.syncOrders(from, to);
 
         if (res.error) {
-            console.log(`City ParkId: ${park.dataValues.parkId} -> error: ${res.error}`);
+            app.sendErr(`method syncOrders for parkId: ${park.dataValues.parkId} ended with error: `, res.error);
         } else {
             console.log(`City ParkId: ${park.dataValues.parkId}
             From: ${from}
@@ -126,17 +126,17 @@ const handleParksList = async () => {
 };
 
 // default interval = 30 minutes
-const startHandling = async (interval = 30) => {
+app.startHandling = async (interval = 30) => {
 
     app.startTime = moment();
 
-    await sequelizeConnection();
+    await app.sequelizeConnection();
 
-    await handleParksList();
+    await app.handleParksList();
 
     const intervalMS = parseInt(interval, 10) * 60 * 1000;
 
-    app.handlingInterval = setInterval(handleParksList,intervalMS);
+    app.handlingInterval = setInterval(app.handleParksList,intervalMS);
 
 };
 
@@ -164,7 +164,7 @@ app.telegramBot.onText(/\/startApp (.+)/, async(msg, match) => {
     const interval = op.get(argsJSON, 'interval', 30);
 
     try {
-        await startHandling(interval);
+        await app.startHandling(interval);
     } catch (e) {
         app.telegramBot.sendMessage(msg.chat.id, `error: ${e}`);
     }
@@ -207,67 +207,11 @@ app.telegramBot.onText(/\/statusApp/, async(msg) => {
 
 app.sendErr = (desc, error) => {
     console.error(desc, error);
-
     app.telegramBotChatIds.forEach((chatId) => {app.telegramBot.sendMessage(chatId, 'error: ' + desc + error)});
 };
 
-app.get('/', function(request, response) {
-    response.send('Hello World!');
-});
 
-app.get('/start', async (request, response) => {
-
-    try {
-        await startHandling(op.get(request.query, 'interval'));
-    } catch (e) {
-        response.status(400).json({error: e});
-    }
-
-    response.status(200).json({
-        message: `parks list handling is started with interval: ${interval} minutes.`
-    });
-
-});
-
-
-app.get('/stop', async (request, response) => {
-
-    if (app.handlingInterval) {
-        try {
-            clearInterval(app.handlingInterval);
-        } catch (e) {
-            response.status(400).json({error: e});
-        }
-    } else {
-        response.status(400).json({error: `parks list handling didn't started`});
-    }
-
-    response.status(200).json({
-        message: `parks list handling is stopped. working time: ${moment().diff(app.startTime, 'seconds')} seconds`
-    });
-
-});
-
-app.post('/park', async (request, response) => {
-
-    const parkData = {
-        parkId: op.get(request.body, 'parkId'),
-        login: op.get(request.body, 'login'),
-        password: op.get(request.body, 'password')
-    };
-
-    if (!app.con) {
-        await sequelizeConnection();
-    }
-
-    try {
-        await app.Parks.findOrCreate({where: {parkId: parkData.parkId}, defaults: parkData});
-        response.status(200).json({message: `park added successfully.`});
-    } catch (e) {
-        response.status(400).json({error: e});
-    }
-});
-
+routes({app, express});
 
 app.listen(app.get('port'), function() {
     console.log("Citymobil parser app is running on port: " + app.get('port'));
