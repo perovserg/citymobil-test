@@ -6,10 +6,10 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import TelegramBot from 'node-telegram-bot-api';
 
-
 import config from './config';
 import classCityFactory from './citytaxi.class';
 import routes from './routes/index';
+import * as handlerTelegramBot from './lib/handlerTelegramBot';
 
 
 const app = express();
@@ -151,68 +151,19 @@ app.use(bodyParser.raw({limit: '2048kb'}));
 
 app.telegramBot = new TelegramBot(op.get(config, 'telegram.token') || '', {polling: true});
 
-app.telegramBotChatIds = [];
+app.telegramBot.chatIds = [];
 
-app.telegramBot.onText(/\/startApp (.+)/, async(msg, match) => {
-
-    if (!app.telegramBotChatIds.includes(msg.chat.id)) app.telegramBotChatIds.push(msg.chat.id);
-
-    const args = match[1];
-
-    const argsJSON = JSON.parse('{"' + args.replace(/ /g, '", "').replace(/=/g, '": "') + '"}');
-
-    const interval = op.get(argsJSON, 'interval', 30);
-
-    try {
-        await app.startHandling(interval);
-    } catch (e) {
-        app.telegramBot.sendMessage(msg.chat.id, `error: ${e}`);
-    }
-
-    app.telegramBot.sendMessage(msg.chat.id, `parks list handling is started with interval: ${interval} minutes.`);
-});
-
-app.telegramBot.onText(/\/stopApp/, async(msg) => {
-
-    const i = app.telegramBotChatIds.indexOf(msg.chat.id);
-    if (i > -1) app.telegramBotChatIds.splice(i, 1);
-
-    if (app.telegramBotChatIds.length > 0) {
-        app.telegramBot.sendMessage(msg.chat.id, `your chat is removed form list of chats.`);
-        return;
-    }
-
-    if (app.handlingInterval) {
-        try {
-            clearInterval(app.handlingInterval);
-        } catch (e) {
-            app.telegramBot.sendMessage(msg.chat.id, `error: ${e}`);
-        }
-    } else {
-        app.telegramBot.sendMessage(msg.chat.id, `error: parks list handling didn't started`);
-    }
-
-    app.telegramBot.sendMessage(msg.chat.id, `parks list handling is stopped. working time: ${moment().diff(app.startTime, 'seconds')} seconds`);
-
-});
-
-app.telegramBot.onText(/\/statusApp/, async(msg) => {
-    if (app.handlingInterval){
-        app.telegramBot.sendMessage(msg.chat.id, `parks list handling is working: ${moment().diff(app.startTime, 'seconds')} seconds`);
-    } else {
-        app.telegramBot.sendMessage(msg.chat.id, `parks list handling is not working`);
-    }
-});
+app.telegramBot.onText(/\//, async(msg) => handlerTelegramBot.onText(app, msg));
 
 
 app.sendErr = (desc, error) => {
     console.error(desc, error);
-    app.telegramBotChatIds.forEach((chatId) => {app.telegramBot.sendMessage(chatId, 'error: ' + desc + error)});
+    app.telegramBot.chatIds.forEach((chatId) => {app.telegramBot.sendMessage(chatId, 'error: ' + desc + error)});
 };
 
 
 routes({app, express});
 
 app.listen(app.get('port'), function() {
-    console.log("Citymobil parser app is running on port: " + app.get('port'));
+    console.log('Citymobil parser app is running on port: ' + app.get('port'));
 });
