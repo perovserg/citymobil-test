@@ -36,4 +36,13 @@ export default ({app, express, router}) => {
 
         });
 
+    router.route('/app/status')
+        .get(async (req, res) => {
+            if (app.handlingInterval){
+                res.status(200).json({message: `parks list handling is working: ${moment().diff(app.startTime, 'seconds')} seconds`});
+            } else {
+                res.status(200).json({message: `parks list handling is not working`});
+            }
+        });
+
 };
