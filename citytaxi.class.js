@@ -62,6 +62,7 @@ module.exports = (app) => {
 
             this.Drivers = app.con.define('city_drivers', {
                 UID:	        {type: app.Sequelize.INTEGER},
+                parkId:         {type: app.Sequelize.INTEGER},
                 lastName:	    {type: app.Sequelize.STRING},
                 firstName:	    {type: app.Sequelize.STRING},
                 surname:	    {type: app.Sequelize.STRING},
@@ -228,7 +229,6 @@ module.exports = (app) => {
                 };
 
                 const payments = await this.request(opt);
-
 
 
                 const $ = app.$.load(payments.html, {decodeEntities: true});
@@ -402,11 +402,11 @@ module.exports = (app) => {
 
                 const pages = parseInt( $('.pages li:last-child span').text().replace(/\D/g,'') );
 
-                console.log('pages', pages);
+//                console.log('pages', pages);
 
                 for(let page = 1; page <= pages; page++) {
                     opt.qs.page = page;
-                    console.log('page', page);
+//                    console.log('page', page);
 
                     const drivers = await this.request(opt);
 
@@ -430,6 +430,8 @@ module.exports = (app) => {
                             if(rowStructure[i] === 'cash') {
                                 a.cash = a.cash === 'Да';
                             }
+
+                            a.parkId = this.companyId;
 
                             return a;
                         }, {})
@@ -546,7 +548,8 @@ module.exports = (app) => {
                     //console.log('orderData', orderData);
 
                     const [driver, drvIsNew] = await this.Drivers.findOrCreate({ where: {UID: orderData.driverUID}, defaults: {
-                            UID: orderData.driverUID,
+                            UID:            orderData.driverUID,
+                            parkId:         this.companyId,
                             lastName:	    orderData.driverName.split(' ')[0],
                             firstName:	    orderData.driverName.split(' ')[1] || null,
                             surname:	    orderData.driverName.split(' ')[2] || null,
@@ -800,9 +803,8 @@ module.exports = (app) => {
                 try {
                     await this.request(opt);
                 } catch (e) {
-                    if(e.statusCode === 502) {
-                        app.sendErr(`Fail on getting response from (${opt.url}) statusCode = ${e.statusCode}`, '');
-                    }
+                    if(e.statusCode === 500) app.sendErr(`Fail on getting response from (${opt.url}) statusCode = ${e.statusCode} `, 'Internal Server Error');
+                    if(e.statusCode === 502) app.sendErr(`Fail on getting response from (${opt.url}) statusCode = ${e.statusCode} `, 'Bad Gateway');
                     if(e.statusCode !== 302) {
                         throw e
                     }
