@@ -150,6 +150,9 @@ app.use(bodyParser.json());
 app.use(bodyParser.raw({limit: '2048kb'}));
 
 app.telegramBot = new TelegramBot(op.get(config, 'telegram.token') || '', {polling: true});
+// localhostTaxiTestBot
+// app.telegramBot = new TelegramBot('629066507:AAHTBnutvu_JsdBRnrU9DQo590mP5x5qzMI', {polling: true});
+
 
 app.telegramBot.chatIds = [];
 
