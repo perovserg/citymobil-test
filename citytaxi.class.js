@@ -62,7 +62,7 @@ module.exports = (app) => {
 
             this.Drivers = app.con.define('city_drivers', {
                 UID:	        {type: app.Sequelize.INTEGER},
-                parkId:         {type: app.Sequelize.INTEGER},
+                parkId:         {type: app.Sequelize.STRING},
                 lastName:	    {type: app.Sequelize.STRING},
                 firstName:	    {type: app.Sequelize.STRING},
                 surname:	    {type: app.Sequelize.STRING},
