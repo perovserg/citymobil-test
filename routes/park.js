@@ -10,15 +10,18 @@ export default ({app, express, router}) => {
                 password: op.get(req.body, 'password')
             };
 
-            if (!app.con) {
-                await app.sequelizeConnection();
-            }
-
             try {
+
+                if (!parkData.login || !parkData.password) throw new Error('Got no login or password!');
+
+                if (!app.con) {
+                    await app.sequelizeConnection();
+                }
+
                 await app.Parks.findOrCreate({where: {parkId: parkData.parkId}, defaults: parkData});
                 res.status(200).json({message: `park was added successfully.`});
             } catch (e) {
-                res.status(400).json({error: e});
+                res.status(400).json({error: e.message});
             }
 
         });
@@ -26,16 +29,19 @@ export default ({app, express, router}) => {
         .delete(async (req, res) => {
             const id = op.get(req.params, 'id');
 
-            if (!app.con) {
-                await app.sequelizeConnection();
-            }
-
             try {
+
+                if (!id) throw new Error('Got no parkId!');
+
+                if (!app.con) {
+                    await app.sequelizeConnection();
+                }
+
                 const park = await app.Parks.findOne({where: {parkId: id}});
                 await park.destroy();
                 res.status(200).json({message: `park was deleted.`});
             } catch (e) {
-                res.status(400).json({error: e});
+                res.status(400).json({error: e.message});
             }
 
         });

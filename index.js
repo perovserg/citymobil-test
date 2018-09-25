@@ -72,7 +72,7 @@ app.sequelizeConnection = async () => {
     });
 
     app.Parks = app.con.define('city_parks', {
-        parkId: {type: app.Sequelize.INTEGER},
+        parkId: {type: app.Sequelize.STRING},
         login: {type: app.Sequelize.STRING},
         password: {type: app.Sequelize.STRING},
     });
@@ -100,28 +100,36 @@ app.handleParksList = async () => {
     const from = moment().subtract(1, 'days').startOf('day').format('DD-MM-YYYY'); //%начало вчерашнего дня в формате 08-09-2018%
     const to = moment().add(1, 'days').startOf('day').format('DD-MM-YYYY'); //%начало следующего дня  в формате 10-09-2018%
 
-    let count = 0;
+    app.serverIsOutOfService = false;
 
     for (const park of parksList) {
 
-        console.log(`start for ParkId: ${park.dataValues.parkId}`);
+        console.log(`start for login: ${park.dataValues.login} with ParkId: ${park.dataValues.parkId}`);
 
         const citytaxi = new ClassCity(park.dataValues.login, park.dataValues.password);
 
         const res = await citytaxi.syncOrders(from, to);
 
+        if (app.serverIsOutOfService) return;
+
+        if (!park.dataValues.parkId) {
+            const parkDbInstance = await app.Parks.findOne({where: {
+                login: park.dataValues.login,
+                password: park.dataValues.password,
+            }});
+            parkDbInstance.parkId = citytaxi.companyId;
+            await parkDbInstance.save();
+        }
+
         if (res.error) {
-            app.sendErr(`method syncOrders for parkId: ${park.dataValues.parkId} ended with error: `, res.error);
+            app.sendErr(`method syncOrders for parkId: ${park.dataValues.parkId} ended with error: `, res.error.message, res.error.toTelegram);
         } else {
             console.log(`City ParkId: ${park.dataValues.parkId}
             From: ${from}
             To: ${to}
             Total: ${res.total}, new: ${res.new}, drivers +${res.newDrvs.length + res.drvSync.new}`);
-            count++;
         }
     }
-
-    if (!count) app.sendErr('', 'there is no handled park! maybe source out of service...');
 
 };
 
@@ -159,9 +167,9 @@ app.telegramBot.chatIds = [];
 app.telegramBot.onText(/\//, async(msg) => handlerTelegramBot.onText(app, msg));
 
 
-app.sendErr = (desc, error) => {
+app.sendErr = (desc, error, toTelegram = true) => {
     console.error(desc, error);
-    app.telegramBot.chatIds.forEach((chatId) => {app.telegramBot.sendMessage(chatId, 'error: ' + desc + error)});
+    if (toTelegram) app.telegramBot.chatIds.forEach((chatId) => {app.telegramBot.sendMessage(chatId, 'error: ' + desc + error)});
 };
 
 

@@ -483,9 +483,16 @@ module.exports = (app) => {
 
                 await this.syncTable();
 
-                if (!await this.login()) return {error: 'login fail'};
+                if (!await this.login()) return {
+                    error: {
+                        message: 'login fail',
+                        toTelegram: false
+                    }
+                };
 
                 await this.getCompanyId();
+
+                if (!this.companyId) return {error: {message: `Got no companyId with login: ${this.auth.login}`}};
 
                 const drvResult = await this.driversSync();
 
@@ -508,7 +515,7 @@ module.exports = (app) => {
                     new: 0,
                     newDrvs: [],
                     drvSync: drvResult
-                }
+                };
 
                 for(const order of orders) {
 
@@ -605,7 +612,7 @@ module.exports = (app) => {
 
             } catch (e) {
                 console.log('orderArr', orderArr);
-                app.sendErr('citytaxi syncOrders', e);
+                app.sendErr('citytaxi syncOrders error: ', e);
                 throw e
             }
         }
@@ -803,8 +810,11 @@ module.exports = (app) => {
                 try {
                     await this.request(opt);
                 } catch (e) {
-                    if(e.statusCode === 500) app.sendErr(`Fail on getting response from (${opt.url}) statusCode = ${e.statusCode} `, 'Internal Server Error');
-                    if(e.statusCode === 502) app.sendErr(`Fail on getting response from (${opt.url}) statusCode = ${e.statusCode} `, 'Bad Gateway');
+                    if(e.statusCode === 500 || e.statusCode === 502) {
+                        app.serverIsOutOfService = true;
+                        app.sendErr(`Fail on getting response from (${opt.url}) statusCode = ${e.statusCode}, ${e.statusCode === 500 ? 'Internal Server Error' : 'Bad Gateway'}`, '');
+                        return false
+                    }
                     if(e.statusCode !== 302) {
                         throw e
                     }
@@ -813,7 +823,6 @@ module.exports = (app) => {
                         if (responseLocation.indexOf('login?r=&error') > -1) {
                             this.logined = false;
                             console.error(`citytaxi login fail for ${this.auth.login}`, this.utf8.decode(responseLocation));
-                        //    app.sendErr(`citytaxi login fail for ${this.auth.login}`, this.utf8.decode(responseLocation));
                             return false;
                         }
                     }
@@ -824,7 +833,7 @@ module.exports = (app) => {
                 return true;
 
             } catch (e) {
-                app.sendErr('citytaxi login', e);
+                app.sendErr('citytaxi login error: ', e);
                 throw e
             }
         }
