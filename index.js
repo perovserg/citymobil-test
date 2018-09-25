@@ -162,6 +162,7 @@ app.telegramBot = new TelegramBot(op.get(config, 'telegram.token') || '', {polli
 // app.telegramBot = new TelegramBot('629066507:AAHTBnutvu_JsdBRnrU9DQo590mP5x5qzMI', {polling: true});
 
 
+
 app.telegramBot.chatIds = [];
 
 app.telegramBot.onText(/\//, async(msg) => handlerTelegramBot.onText(app, msg));
